@@ -1,0 +1,7 @@
+movie.batch_movie:
+  path: '/admin/batch-movie'
+  defaults:
+    _form: '\Drupal\movie\Form\MovieCodeForm'
+    _title: 'Movie Loade'
+  requirements:
+    _permission: 'administer site configuration'

@@ -1,0 +1,12 @@
+name: Views Results Serializer Extra
+type: module
+description: Adds a new Views style plugin to add additional metadata into the response for REST Export displays in Views.
+core_version_requirement: ^9 || ^10 || ^11
+dependencies:
+  - drupal:rest
+  - drupal:serialization
+
+# Information added by Drupal.org packaging script on 2024-05-19
+version: '1.0.2'
+project: 'views_rest_serializer_extra'
+datestamp: 1716150336

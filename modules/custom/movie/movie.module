@@ -1,0 +1,22 @@
+<?php
+use Drupal\Core\Url;
+use Drupal\node\Entity\Node;
+
+function movie_preprocess_node(&$variables) {
+  $node = $variables['node'];
+  $view_mode = $variables['view_mode'];
+  
+  
+  $node3 = \Drupal::routeMatch()->getParameter('node');
+ if ($node->getType() == 'movie' && $view_mode=='full' && $node3 instanceof \Drupal\node\NodeInterface) {
+  // Get the node ID.
+  
+$context ='';
+  $nid = $variables['node']->id();
+ 
+   $node2 = \Drupal\movie\ReplaceLanguageCode::replaceLangcode($nid,$context);
+
+ $variables['#cache']['max-age'] = 0;
+ 
+}
+}

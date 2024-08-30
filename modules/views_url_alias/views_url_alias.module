@@ -1,0 +1,214 @@
+<?php
+
+/**
+ * @file
+ * Allows content entity Views to be filtered by path aliases.
+ */
+
+use Drupal\Core\Entity\EntityInterface;
+use Drupal\Core\Form\FormStateInterface;
+use Drupal\Core\Utility\Error;
+use Drupal\path_alias\PathAliasInterface;
+
+/**
+ * Gets the path entity type.
+ *
+ * @param string $path
+ *   Path.
+ *
+ * @return \Drupal\Core\Entity\EntityInterface
+ *   Returns the entity type.
+ */
+function views_url_alias_get_path_enitiy_type($path) {
+  /** @var \Drupal\Core\Routing\Router $router */
+  $router = \Drupal::service('router.no_access_checks');
+  $result = $router->match($path);
+  /** @var \Symfony\Component\Routing\Route $route */
+  $route = $result['_route_object'];
+  $params = $route->getOption('parameters');
+  $entity_type = '';
+  foreach ($params as $param) {
+    if (isset($param['type'])) {
+      $entity_type = explode(':', $param['type'])[1];
+      break;
+    }
+  }
+
+  return $result[$entity_type];
+}
+
+/**
+ * Implements hook_ENTITY_TYPE_insert() for 'path_alias'.
+ *
+ * Inserts a path alias into the views_url_alias table.
+ */
+function views_url_alias_path_alias_insert(PathAliasInterface $path_alias): void {
+  $entity = views_url_alias_get_path_enitiy_type($path_alias->getPath());
+  if ($entity) {
+    views_url_alias_save($entity, $path_alias->getAlias());
+  }
+}
+
+/**
+ * Implements hook_ENTITY_TYPE_update() for 'path_alias'.
+ *
+ * Respond to a path being updated.
+ */
+function views_url_alias_path_alias_update(PathAliasInterface $path_alias): void {
+  if ($path_alias->getAlias() === $path_alias->original->getAlias()) {
+    return;
+  }
+
+  $entity = views_url_alias_get_path_enitiy_type($path_alias->getPath());
+  if ($entity) {
+    views_url_alias_save($entity, $path_alias->getAlias());
+  }
+}
+
+/**
+ * Implements hook_ENTITY_TYPE_delete() for 'path_alias'.
+ *
+ * Respond to a path being deleted.
+ */
+function views_url_alias_path_alias_delete(PathAliasInterface $path): void {
+  $entity = views_url_alias_get_path_enitiy_type($path->getPath());
+  if ($entity) {
+    views_url_alias_save($entity);
+  }
+}
+
+/**
+ * Implements hook_pathauto_alias_alter().
+ */
+function views_url_alias_pathauto_alias_alter(&$alias, array &$context) {
+  // Save alias during bulk update.
+  if ($context['op'] == 'bulkupdate') {
+    $entity = views_url_alias_get_path_enitiy_type($context['source']);
+    if ($entity) {
+      views_url_alias_save($entity, $alias);
+    }
+  }
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ */
+function views_url_alias_form_pathauto_admin_delete_alter(&$form, FormStateInterface $form_state, $form_id) {
+  $form['#submit'][] = 'views_url_alias_form_pathauto_admin_delete_submit';
+}
+
+/**
+ * Submit processing for bulk delete of aliases.
+ */
+function views_url_alias_form_pathauto_admin_delete_submit($form, FormStateInterface $form_state) {
+  $database = \Drupal::database();
+  if ($form_state->getValue('delete')['all_aliases']) {
+    $database->truncate('views_url_alias')->execute();
+  }
+  else {
+    /** @var \Drupal\pathauto\AliasTypeManager $aliasManager */
+    $aliasManager = \Drupal::service('plugin.manager.alias_type');
+    foreach ($form_state->getValue('delete')['plugins'] as $plugin_id => $value) {
+      if ($value) {
+        $definition = $aliasManager->getDefinition($plugin_id);
+        foreach ($definition['types'] as $entity_type) {
+          $database->delete('views_url_alias')
+            ->condition('entity_type', $entity_type);
+        }
+      }
+    }
+  }
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ */
+function views_url_alias_form_path_alias_delete_form_alter(&$form, FormStateInterface $form_state, $form_id) {
+  // We need info from the alias record before it's deleted.
+  array_unshift($form['#submit'], 'views_url_alias_form_path_alias_delete_submit');
+}
+
+/**
+ * Submit for path alias delete form.
+ *
+ * @param array $form
+ *   The form array.
+ * @param \Drupal\Core\Form\FormStateInterface $form_state
+ *   Current form state.
+ */
+function views_url_alias_form_path_alias_delete_submit(array $form, FormStateInterface $form_state) {
+  $build_info = $form_state->getBuildInfo();
+  if (isset($build_info['args'][0])) {
+    $alias_id = $build_info['args'][0];
+    $alias_storage = \Drupal::entityTypeManager()->getStorage('path_alias');
+    /** @var \Drupal\path_alias\Entity\PathAlias $alias */
+    $alias = $alias_storage->load($alias_id);
+    $entity = views_url_alias_get_path_enitiy_type($alias->getPath());
+    if ($entity) {
+      views_url_alias_save($entity);
+    }
+  }
+}
+
+/**
+ * Save URL alias.
+ *
+ * @param \Drupal\Core\Entity\EntityInterface $entity
+ *   Entity object.
+ * @param string|null $alias
+ *   Alias.
+ */
+function views_url_alias_save(EntityInterface $entity, $alias = NULL) {
+  // Save URL alias only for entity types with numeric IDs.
+  if (!ctype_digit($entity->id())) {
+    return;
+  }
+  $database = \Drupal::database();
+  $database->delete('views_url_alias')
+    ->condition('entity_id', $entity->id())
+    ->condition('entity_type', $entity->getEntityTypeId())
+    ->condition('langcode', $entity->language()->getId())
+    ->execute();
+
+  if (empty($alias)) {
+    return;
+  }
+
+  try {
+    $database->insert('views_url_alias')
+      ->fields([
+        'alias' => $alias,
+        'entity_id' => $entity->id(),
+        'entity_type' => $entity->getEntityTypeId(),
+        'langcode' => $entity->language()->getId(),
+      ])
+      ->execute();
+  }
+  catch (Exception $e) {
+    $logger = \Drupal::logger('views_url_alias');
+    Error::logException($logger, $e);
+  }
+}
+
+/**
+ * Rebuild view_url_alias table.
+ *
+ * This function typically only needs to be called when this module is
+ * installed.
+ */
+function views_url_alias_rebuild_path() {
+  $database = \Drupal::database();
+  // Purge view_url_alias table.
+  $database->truncate('views_url_alias')->execute();
+
+  $res = $database->select('path_alias', 'pa')->fields('pa', [
+    'path',
+    'alias',
+  ])->execute();
+  foreach ($res as $path) {
+    $entity = views_url_alias_get_path_enitiy_type($path->path);
+    if ($entity) {
+      views_url_alias_save($entity, $path->alias);
+    }
+  }
+}

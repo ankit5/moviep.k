@@ -1,0 +1,20 @@
+name: Moviepk
+type: theme
+description: 'My Hdmovie2 theme'
+base theme: classy
+package: PackageName
+core_version_requirement: ^9.4 || ^10
+
+regions:
+  head_top: head_top
+  header: header
+  primary_menu: Primary menu
+  content: content
+  content_home: content_home
+  load_block: load_block
+  sidebar: sidebar
+  footer: footer
+
+version: '1.0.0'
+project: 'moviepk'
+datestamp: 1661826904

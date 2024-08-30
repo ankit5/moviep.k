@@ -1,0 +1,15 @@
+name: Views URL alias
+type: module
+description: Allows content related Views be filtered by path aliases.
+package: Views
+dependencies:
+  - drupal:path
+  - drupal:path_alias
+  - drupal:views
+# project: views_url_alias
+core_version_requirement: ^8.8 || ^9 || ^10
+
+# Information added by Drupal.org packaging script on 2024-03-22
+version: '3.1.0'
+project: 'views_url_alias'
+datestamp: 1711071322

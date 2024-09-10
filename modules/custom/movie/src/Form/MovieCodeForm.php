@@ -31,7 +31,6 @@ class MovieCodeForm extends FormBase {
     $form['pageno'] = [
       '#type' => 'textfield',
       '#title' => $this->t('Page Number'),
-      '#required' => TRUE,
       '#maxlength' => 20,
       '#default_value' =>  '',
     ];
@@ -53,7 +52,6 @@ class MovieCodeForm extends FormBase {
     $form['movieno'] = [
       '#type' => 'textfield',
       '#title' => $this->t('Load Movie Numbers'),
-      '#required' => TRUE,
       '#maxlength' => 20,
       '#default_value' =>  '',
     ];
@@ -67,7 +65,6 @@ class MovieCodeForm extends FormBase {
     $form['imageno'] = [
       '#type' => 'textfield',
       '#title' => $this->t('Save Movie Numbers'),
-      '#required' => TRUE,
       '#maxlength' => 20,
       '#default_value' =>  '',
     ];

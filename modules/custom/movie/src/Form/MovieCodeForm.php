@@ -27,6 +27,14 @@ class MovieCodeForm extends FormBase {
     $form['actions'] = [
       '#type' => 'actions',
     ];
+    
+    $form['pageno'] = [
+      '#type' => 'textfield',
+      '#title' => $this->t('Page Number'),
+      '#required' => TRUE,
+      '#maxlength' => 20,
+      '#default_value' =>  '',
+    ];
 
     $form['actions']['submit1'] = [
       '#type' => 'submit',
@@ -42,12 +50,26 @@ class MovieCodeForm extends FormBase {
       '#button_type' => 'primary',
       '#submit' => array([$this, 'submitFormTwo'])
     ];
+    $form['movieno'] = [
+      '#type' => 'textfield',
+      '#title' => $this->t('Load Movie Numbers'),
+      '#required' => TRUE,
+      '#maxlength' => 20,
+      '#default_value' =>  '',
+    ];
     $form['actions']['submit3'] = [
       '#type' => 'submit',
       '#value' => $this->t('Save Movies Image'),
       "#weight" => 2,
       '#button_type' => 'primary',
       '#submit' => array([$this, 'submitFormThree'])
+    ];
+    $form['imageno'] = [
+      '#type' => 'textfield',
+      '#title' => $this->t('Save Movie Numbers'),
+      '#required' => TRUE,
+      '#maxlength' => 20,
+      '#default_value' =>  '',
     ];
     
 
@@ -70,8 +92,9 @@ class MovieCodeForm extends FormBase {
       'operations' => [],
       'finished' => '\Drupal\movie\ReplaceLanguageCode::replaceLangcodeFinishedCallback',
     ];
+    $field = $form_state->getValues();
  
-    $i = 1;
+    $i = $field['pageno'];
  while ($i > 0) {
     $batch['operations'][] = ['\Drupal\movie\ReplaceLanguageCode::getmovie2', [$i]];
  
@@ -86,10 +109,11 @@ class MovieCodeForm extends FormBase {
    */
   public function submitFormTwo(array &$form, FormStateInterface $form_state) {
     //print_r('2');
+    $field = $form_state->getValues();
     $query = \Drupal::entityTypeManager()->getStorage('node')->getQuery();
    $query->condition('type', 'movie', '=');
   $query->sort('created', 'DESC');
-  $nids = $query->range(0,272)->execute();
+  $nids = $query->range(0,$field['movieno'])->execute();
 
   $batch = [
     'title' => t('Replacing Language Code...'),
@@ -108,10 +132,11 @@ class MovieCodeForm extends FormBase {
    */
   public function submitFormThree(array &$form, FormStateInterface $form_state) {
     //print_r('2');
+    $field = $form_state->getValues();
     $query = \Drupal::entityTypeManager()->getStorage('node')->getQuery();
    $query->condition('type', 'movie', '=');
   $query->sort('created', 'DESC');
-  $nids = $query->range(0,272)->execute();
+  $nids = $query->range(0,$field['imageno'])->execute();
 
   $batch = [
     'title' => t('Replacing Language Code...'),
